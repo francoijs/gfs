@@ -1,4 +1,4 @@
 gfs
 ===
 
-Help find interesting files on the web
+Helps find interesting files on the web

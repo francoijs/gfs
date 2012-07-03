@@ -1,0 +1,17 @@
+{
+  "name": "Interesting files",
+  "version": "0.1",
+  "permissions": [
+    "http://*/*",
+    "https://*/*",
+    ],
+  	"icons": {
+    	"256": "icon-256.png"
+  	},
+    "app": {
+	    "launch": {
+	      "local_path": "gfs.html"
+    }
+  }
+   
+}

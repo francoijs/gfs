@@ -20,6 +20,7 @@ $.expr[":"].containsNoCase = function(el, i, m) {
 /**
  * 
  * Global namespace
+ * @namespace
  * @name GMusic
  * 
  */
@@ -28,11 +29,48 @@ GMusic = (function() {
 var exports = {};
 
 
+
+/**
+ * 
+ * Constants
+ * @namespace
+ * @name Constants
+ * @private
+ * @memberOf GMusic
+ * 
+ */
+var Constants = {
+		
+		/**
+		 * @private
+		 * @memberOf Constants
+		 */ 
+		Images: {
+			LOADING	: 'gfx/loading.gif',
+			OK		: 'gfx/ok.png',
+			ERROR	: 'gfx/error.png'
+		},
+		
+		Selectors: {
+			DOWNLOADING_LIST: '#downloading',
+			RESULTS_COUNT	: '#resultsCount',
+			RESULTS_LIST	: '#results',
+			DOWNLOAD_BUTTONS: '#dlButtons input',
+			QUERY_TEXT		: '#myText',
+			MAX_DOWNLOADS	: '#maxDownloads',
+			EXTENSIONS_LIST	: '#extensionsList',
+			MAX_RESULTS		: '#maxResults'
+		}
+		
+};
+
+
 /**
  * 
  * Parser of remote open directories
- * @private
+ * @namespace
  * @name Parser
+ * @private
  * @memberOf GMusic
  * 
  */
@@ -153,7 +191,9 @@ var Parser = (function(){
 /**
  * 
  * Remote or local elements management
- * @namespace GMusic.Elements
+ * @namespace
+ * @name Elements
+ * @private
  * @memberOf GMusic
  * 
  */
@@ -376,18 +416,18 @@ var Elements = (function() {
 				getElements: function(cb) {
 					if (!_elements) {
 						// status=loading
-						_imgJElement.attr('src', 'loading.gif')
+						_imgJElement.attr('src', Constants.Images.LOADING)
 							.css('visibility', 'visible');
 						// scan remote directory
 						_explore(_query, function(els) {
 							_elements = els;
 							if (!els) {
 								// status=error
-								_imgJElement.attr('src', 'error.png');
+								_imgJElement.attr('src', Constants.Images.ERROR);
 							}
 							else {
 								// status=ok
-								_imgJElement.attr('src', 'ok.png');								
+								_imgJElement.attr('src', Constants.Images.OK);								
 							}
 							if (cb)
 								cb(els);
@@ -406,7 +446,7 @@ var Elements = (function() {
 				 * @return {DOMElement} new link DOM element
 				 */
 				addToResults: function(parent) {
-					var el = $("<input type='checkbox'></input><img src='loading.gif' width=15 height=15></src><a href='#'>" 
+					var el = $("<input type='checkbox'></input><img width=15 height=15></src><a href='#'>" 
 							+ _uri.toString() + "</a>" + " : " 
 							+ _name + "<br><div></div>");
 					// prepend with a checkbox
@@ -738,7 +778,7 @@ var Elements = (function() {
 													});		
 										},
 										// display as downloading and get update function
-										self.displayAsDownloading($('#downloading')[0])
+										self.displayAsDownloading($(Constants.Selectors.DOWNLOADING_LIST)[0])
 								);
 							}
 					);
@@ -805,6 +845,7 @@ exports.Elements = Elements;
 /**
  * 
  * Search operations
+ * @namespace
  * @name Search
  * @memberOf GMusic
  * 
@@ -835,7 +876,7 @@ var Search = (function() {
 	exports.initExtensionsList = function() {
 		
 		// fill extensions list
-		var el = $("#extensionsList");
+		var el = $(Constants.Selectors.EXTENSIONS_LIST);
 		el.html("");
 		var i, exts, opt, extstr;
 		for (i=0; i<extensions.length; ++i) {
@@ -895,7 +936,7 @@ var Search = (function() {
 	 */
 	exports.incResultsSize = function() {
 		_resultsSize += RESULTS_SIZE_STEP;
-		$("#maxResults").val(_resultsSize);
+		$(Constants.Selectors.MAX_RESULTS).val(_resultsSize);
 	};
 	
 	
@@ -909,7 +950,7 @@ var Search = (function() {
 	exports.decResultsSize = function() {
 		if (_resultsSize > RESULTS_SIZE_STEP)
 			_resultsSize -= RESULTS_SIZE_STEP;
-		$("#maxResults").val(_resultsSize);
+		$(Constants.Selectors.MAX_RESULTS).val(_resultsSize);
 	};
 	
 	
@@ -926,7 +967,7 @@ var Search = (function() {
 		return {
 			set: function(n) {
 				_resultsNum = n;
-				$('#resultsCount').text('Results: '+_resultsNum);
+				$(Constants.Selectors.RESULTS_COUNT).text('Results: '+_resultsNum);
 				return _resultsNum;
 			},
 			get: function() {
@@ -955,8 +996,8 @@ var Search = (function() {
 			var dir = Elements.createDirectory(
 					res.unescapedUrl, 
 					res.title, 
-					createQuery($("#myText").val(), extensions[_extIndex]));
-			dir.addToResults($("#results")[0]);
+					createQuery($(Constants.Selectors.QUERY_TEXT).val(), extensions[_extIndex]));
+			dir.addToResults($(Constants.Selectors.RESULTS_LIST)[0]);
 		});
 		
 		_totalHosts += searcher.results.length;
@@ -1030,7 +1071,7 @@ var Search = (function() {
 		
 		//!! dont use 'size' in request or no answer ...
 		var request = "-inurl:(htm|html|php) +\"index of\" +\"last modified\" +\"parent directory\" +description "
-			+ ' +('+_extstr+')' + ' +\"' + $("#myText").val() + '\"'
+			+ ' +('+_extstr+')' + ' +\"' + $(Constants.Selectors.QUERY_TEXT).val() + '\"'
 			+ ' ' + _blstr;
 		console.log('send request ' + request);
 		_page = 0;
@@ -1046,7 +1087,7 @@ var Search = (function() {
 	 * @memberOf Search
 	 */
 	exports.clearQuery = function() {
-		$("#myText").val('');
+		$(Constants.Selectors.QUERY_TEXT).val('');
 	};
 
 	
@@ -1058,8 +1099,8 @@ var Search = (function() {
 	 * @memberOf Search
 	 */
 	exports.clear = function() {
-		console.log('clearing '+$("#results > a").length+' elements');
-		$("#results").empty();
+		console.log('clearing '+$(Constants.Selectors.RESULTS_LIST+' > a').length+' elements');
+		$(Constants.Selectors.RESULTS_LIST).empty();
 		_resultsCount.set(0);
 		_totalHosts = 0;
 	};
@@ -1076,6 +1117,7 @@ exports.Search = Search;
 /**
  * 
  * Operations on downloaded files
+ * @namespace
  * @name Download
  * @public
  * @memberOf GMusic
@@ -1098,7 +1140,7 @@ var Download = (function() {
 	 */
 	exports.incMaxDownload = function() {
 		_maxDownloads++;
-		$("#maxDownloads").val(_maxDownloads);
+		$(Constants.Selectors.MAX_DOWNLOADS).val(_maxDownloads);
 		
 	};
 	
@@ -1113,7 +1155,7 @@ var Download = (function() {
 	exports.decMaxDownload = function() {
 		if (_maxDownloads > 1)
 			_maxDownloads--;
-		$("#maxDownloads").val(_maxDownloads);
+		$(Constants.Selectors.MAX_DOWNLOADS).val(_maxDownloads);
 	};
 	
 	
@@ -1144,7 +1186,7 @@ var Download = (function() {
 			// end of file write
 			if (res) {
 				// success
-				f.displayAsLink($("#downloading")[0]);
+				f.displayAsLink($(Constants.Selectors.DOWNLOADING_LIST)[0]);
 				f.removeDownloading();
 				_done++;
 				_downloadNext(fs, files, idx+step, step);
@@ -1170,7 +1212,7 @@ var Download = (function() {
 		// get storage directory
 		LocalStorage.getFileSystem(function(fs) {
 			// download each file
-			var files = _getSelectedElements($('#results'));
+			var files = _getSelectedElements($(Constants.Selectors.RESULTS_LIST));
 			console.log("downloading "+ files.length +" files...");
 			_done = 0;
 			for (var i=0; i<_maxDownloads && i<files.length; i++)
@@ -1187,7 +1229,7 @@ var Download = (function() {
 	 * @memberOf Download
 	 */
 	function select_all_download() {
-		var cbs = $("#downloading").find("input[type='checkbox']");
+		var cbs = $(Constants.Selectors.DOWNLOADING_LIST).find("input[type='checkbox']");
 		if (!cbs.size())
 			return;
 		cbs.attr('checked', true).change();
@@ -1206,7 +1248,7 @@ var Download = (function() {
 	 * @memberOf Download
 	 */
 	function unselect_all_download() {
-		$("#downloading").find("input[type='checkbox']")
+		$(Constants.Selectors.DOWNLOADING_LIST).find("input[type='checkbox']")
 			.attr('checked', false).change();
 		$('input[type="button"][name="selectDlButton"]')
 			.unbind("click").click(select_all_download)
@@ -1223,7 +1265,7 @@ var Download = (function() {
 	 */
 	exports.clear = function() {
 		// remove selected files
-		var files = $("#downloading input:checked");
+		var files = $(Constants.Selectors.DOWNLOADING_LIST+' input:checked');
 		console.log("removing "+ files.size() +" files...");
 		files.each(function(i, el) {
 			$(el).data('myObject').removeLink();
@@ -1240,12 +1282,14 @@ var Download = (function() {
 	 * @memberOf Download
 	 */
 	exports.zip = function() {
-		var els = _getSelectedElements($('#downloading'));
+		var els = _getSelectedElements($(Constants.Selectors.DOWNLOADING_LIST));
+		if (!els.length)
+			return;
 		var zip = new JSZip();
 		var done = 0;
 		console.log(els.length+' elements selected');
 		// disable dl actions
-		var buttons = $('#dlButtons input');
+		var buttons = $(Constants.Selectors.DOWNLOAD_BUTTONS);
 		buttons.attr('disabled',true);
 		var zipb = buttons.filter('input[name=zipDlButton]');
 		zipb.val('archiving...');
@@ -1323,7 +1367,8 @@ exports.Download = Download;
 /**
  * 
  * Operations on files from local storage
- * @name Search
+ * @namespace
+ * @name LocalStorage
  * @public
  * @memberOf GMusic
  * 
@@ -1455,7 +1500,7 @@ var LocalStorage = (function() {
 	/**
 	 * Create a new file in given file system
 	 * @public
-	 * @name LocalStorage#createFile
+	 * @name #createFile
 	 * @function
 	 * @memberOf LocalStorage
 	 * @param {String} name name of file
@@ -1481,7 +1526,7 @@ var LocalStorage = (function() {
 	/**
 	 * Write data to file
 	 * @public
-	 * @name LocalStorage#writeToFile
+	 * @name #writeToFile
 	 * @function
 	 * @memberOf LocalStorage
 	 * @param {FileEntry} entry file entry
@@ -1545,7 +1590,7 @@ $(function() {
 		console.log(entries.length+' files in local store');
 		for (var i=0; i<entries.length; ++i) {
 			var f = GMusic.Elements.createFile(entries[i].fullPath, entries[i]);
-			f.displayAsLink($("#downloading")[0]);
+			f.displayAsLink($(Constants.Selectors.DOWNLOADING_LIST)[0]);
 		}
 	});
 });

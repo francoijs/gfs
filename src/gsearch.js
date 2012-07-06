@@ -21,10 +21,10 @@ $.expr[":"].containsNoCase = function(el, i, m) {
  * 
  * Global namespace
  * @namespace
- * @name GMusic
+ * @name GFS
  * 
  */
-GMusic = (function() {
+GFS = (function() {
 	
 var exports = {};
 
@@ -36,7 +36,7 @@ var exports = {};
  * @namespace
  * @name Constants
  * @private
- * @memberOf GMusic
+ * @memberOf GFS
  * 
  */
 var Constants = {
@@ -71,7 +71,7 @@ var Constants = {
  * @namespace
  * @name Parser
  * @private
- * @memberOf GMusic
+ * @memberOf GFS
  * 
  */
 var Parser = (function(){
@@ -194,7 +194,7 @@ var Parser = (function(){
  * @namespace
  * @name Elements
  * @private
- * @memberOf GMusic
+ * @memberOf GFS
  * 
  */
 var Elements = (function() {
@@ -847,7 +847,7 @@ exports.Elements = Elements;
  * Search operations
  * @namespace
  * @name Search
- * @memberOf GMusic
+ * @memberOf GFS
  * 
  */
 var Search = (function() {
@@ -858,8 +858,8 @@ var Search = (function() {
 	// extensions
 	// TODO add extensions
 	var extensions = [
+        ['wma', 'mp3', 'ogg', 'm4a', 'm4p', 'flac', 'alac'],
 	    ['pdf', 'doc', 'xls', 'ppt', 'pps', 'docx', 'xlsx', 'pptx', 'ppsx', 'odt', 'ods', 'odp'],
-		['wma', 'mp3', 'ogg', 'm4a', 'm4p', 'flac', 'alac'],
 		['gp3', 'gp4', 'gp5', 'gpx', 'gtp', 'ptb', 'tef', 'ly']
 	];
 	var _extIndex = 0;
@@ -1120,7 +1120,7 @@ exports.Search = Search;
  * @namespace
  * @name Download
  * @public
- * @memberOf GMusic
+ * @memberOf GFS
  * 
  */
 var Download = (function() {
@@ -1370,7 +1370,7 @@ exports.Download = Download;
  * @namespace
  * @name LocalStorage
  * @public
- * @memberOf GMusic
+ * @memberOf GFS
  * 
  */
 var LocalStorage = (function() {
@@ -1568,7 +1568,7 @@ exports.LocalStorage = LocalStorage;
 
 return exports;
 
-})(); // end of GMusic
+})(); // end of GFS
 
 
 
@@ -1582,14 +1582,14 @@ return exports;
 $(function() {
 
 	// various UI inits
-	$('input[type="button"][name="selectDlButton"]').click(GMusic.Download.selectAll);
-	GMusic.Search.initExtensionsList();
+	$('input[type="button"][name="selectDlButton"]').click(GFS.Download.selectAll);
+	GFS.Search.initExtensionsList();
 	
 	// restore list of local files
-	GMusic.LocalStorage.getAllFiles(function(entries) {
+	GFS.LocalStorage.getAllFiles(function(entries) {
 		console.log(entries.length+' files in local store');
 		for (var i=0; i<entries.length; ++i) {
-			var f = GMusic.Elements.createFile(entries[i].fullPath, entries[i]);
+			var f = GFS.Elements.createFile(entries[i].fullPath, entries[i]);
 			f.displayAsLink($(Constants.Selectors.DOWNLOADING_LIST)[0]);
 		}
 	});

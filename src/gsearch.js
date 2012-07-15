@@ -48,10 +48,12 @@ var Constants = {
 		Images: {
 			LOADING	: 'gfx/loading.gif',
 			OK		: 'gfx/ok.png',
-			ERROR	: 'gfx/error.png'
+			ERROR	: 'gfx/error.png',
+			WARNING : 'gfx/warning.png'
 		},
 		
 		Selectors: {
+			DOWNLOADER_FORM : '#downloader',
 			DOWNLOADING_LIST: '#downloading',
 			RESULTS_COUNT	: '#resultsCount',
 			RESULTS_LIST	: '#results',
@@ -95,10 +97,8 @@ var Parser = (function(){
 			snd.parents('td').next('td').find('a').each(function(i, a) {
 				// url is either attr href (as in http://138678.activeboard.com/t42662121/index-of-publicmp3metallica/)
 				// or pathname (as in https://notendur.hi.is/shl1/birna/Arcade%20Fire/The%20Suburbs/)
-				var url = a.href;
-				if (url.indexOf('chrome-extension') === 0)
-					url = path + a.pathname;
-				ret.push(Elements.create(url, a.text));
+				var url = new URI(a.href);
+				ret.push(Elements.create(path + url.filename(), a.text));
 			});
 			dirs.parents('td').next('td').find('a').each(function(i, a) {
 				if (a.text !== 'Parent Directory')
@@ -141,7 +141,8 @@ var Parser = (function(){
 				// get all following anchors except 'folder'
 				links.nextAll('a[href!="folder.jpg"]').each(function(i, a) {
 					ret = ret || [];
-					ret.push(Elements.create(path + a.pathname, a.text, query));
+					var url = new URI(a.href);
+					ret.push(Elements.create(path + url.filename(), a.text, query));
 				});
 				return ret;
 			}
@@ -168,7 +169,8 @@ var Parser = (function(){
 				// get all following anchors
 				links.parent('LI').nextAll().children('A').each(function(i, a) {
 					ret = ret || [];
-					ret.push(Elements.create(path + a.pathname, a.text, query));
+					var url = new URI(a.href);
+					ret.push(Elements.create(path + url.filename(), a.text, query));
 				});
 				return ret;
 			}
@@ -176,11 +178,22 @@ var Parser = (function(){
 	})();
 
 	
+	/**
+	 * Parse document to retrieve listed files and directories 
+	 * @public
+	 * @name getElements
+	 * @memberOf Parser
+	 * @function
+	 * @param {String} data document content
+	 * @param {Query} query filter
+	 * @param {String} path document path
+	 * @return {Array} array of elements
+	 */
 	return {
 		getElements: function(data, query, path) {
 			return DIR.getElements(data, query, path)
-			|| PRE.getElements(data, query, path)
-			|| UL.getElements(data, query, path);
+				|| PRE.getElements(data, query, path)
+				|| UL.getElements(data, query, path);
 		}
 	};
 	
@@ -447,7 +460,7 @@ var Elements = (function() {
 				 * @return {DOMElement} new link DOM element
 				 */
 				addToResults: function(parent) {
-					var el = $("<input type='checkbox'></input><img width=15 height=15></src><a href='#'>" 
+					var el = $("<input type='checkbox'></input><img width=16 height=16></img><a href='#'>" 
 							+ _uri.toString() + "</a>" + " : " 
 							+ _name + "<br><div></div>");
 					// prepend with a checkbox
@@ -821,6 +834,17 @@ var Elements = (function() {
 	}
 	
 	
+	/**
+	 * Create element of the correct type for a given URL
+	 * @public
+	 * @name create
+	 * @function
+	 * @memberOf Elements
+	 * @param {String} url url of element
+	 * @param {String} name name of element
+	 * @param {Query} query exploration filter
+	 * @return {Element} new element
+	 */
 	exports.create = function(url, name, query) {
 		if (url[url.length-1] === '/') {
 			// create dir 
@@ -911,6 +935,7 @@ var Search = (function() {
 	                 , 'mp3blogs.com'
 	                 , 'writeups.info'
 	                 , 'registryquick.net'
+	                 , 'doxic.com'
 	];
 	// TODO greylist are e.g password-protected sites
 	var greylist = [     'wallywashis.name'
@@ -1214,6 +1239,35 @@ var Download = (function() {
 		LocalStorage.getFileSystem(function(fs) {
 			// download each file
 			var files = _getSelectedElements($(Constants.Selectors.RESULTS_LIST));
+			var i;
+			console.log("downloading "+ files.length +" files...");
+			_done = 0;
+			if (fs) {
+				for (i=0; i<_maxDownloads && i<files.length; i++)
+					_downloadNext(fs, files, i, _maxDownloads);
+			}
+			else {
+				// no local storage: open selected files one by one with browser
+				for (i=0; i<files.length; i++)
+					window.open(files[i].getURL());
+			}
+		});
+	};
+	
+	
+	/**
+	 * Open selected files one by one with browser
+	 * @public
+	 * @name Download#startNoFS
+	 * @function
+	 * @memberOf Download
+	 */
+	exports.startNoFS = function() {
+		
+		// get storage directory
+		LocalStorage.getFileSystem(function(fs) {
+			// download each file
+			var files = _getSelectedElements($(Constants.Selectors.RESULTS_LIST));
 			console.log("downloading "+ files.length +" files...");
 			_done = 0;
 			for (var i=0; i<_maxDownloads && i<files.length; i++)
@@ -1272,6 +1326,21 @@ var Download = (function() {
 			$(el).data('myObject').removeLink();
 		});
 		unselect_all_download();
+	};
+	
+	
+	/**
+	 * Disable the download functionalities
+	 * @public
+	 * @name Download#disable
+	 * @function
+	 * @memberOf Download
+	 * @param {String} msg cause for disabling
+	 */
+	exports.disable = function(msg) {
+		$(Constants.Selectors.DOWNLOADER_FORM)
+			.html('<img width=16 height=16 src="'+Constants.Images.WARNING+'"></img>'
+					+ '<i style="padding-left: 1em;font-size:12px">'+msg+'</i>');
 	};
 	
 	
@@ -1425,6 +1494,12 @@ var LocalStorage = (function() {
 					cb(_fs);
 			}
 			else {
+				if (!window.webkitStorageInfo) {
+					// FS API not supported here (e.g firefox 13)
+					cb();
+					return;
+				}
+				
 				// Note: The file system has been prefixed as of Google Chrome 12:
 				window.requestFileSystem  = window.requestFileSystem || window.webkitRequestFileSystem;
 				window.BlobBuilder = window.BlobBuilder || window.WebKitBlobBuilder;
@@ -1470,6 +1545,12 @@ var LocalStorage = (function() {
 		
 		getFileSystem(function(fs) {
 			
+			if (!fs) {
+				// FS API not available
+				cb();
+				return;
+			}
+			
 			var dirReader = fs.root.createReader();
 			var entries = [];
 			
@@ -1479,8 +1560,7 @@ var LocalStorage = (function() {
 					var i;
 					if (!results.length) {
 						// call cb with array of entries
-						if (cb)
-							cb(entries);
+						cb(entries);
 					} else {
 						// results is an EntryArray != regular Array
 						for (i=0; i<results.length; ++i) {
@@ -1508,6 +1588,7 @@ var LocalStorage = (function() {
 	 * @param {Function} callback for end of creation
 	 */
 	exports.createFile = function(fs, name, cb) {
+		// FIXME: set exclusive=true to detect if file already exists
 		fs.root.getFile(
 				name,
 				{create: true, exclusive: false},
@@ -1588,10 +1669,17 @@ $(function() {
 	
 	// restore list of local files
 	GFS.LocalStorage.getAllFiles(function(entries) {
-		console.log(entries.length+' files in local store');
-		for (var i=0; i<entries.length; ++i) {
-			var f = GFS.Elements.createFile(entries[i].fullPath, entries[i]);
-			f.displayAsLink($(GFS.Constants.Selectors.DOWNLOADING_LIST)[0]);
+		if (!entries) {
+			console.log('local store not available!');
+			// fallback download mode
+			GFS.Download.disable('Some download functionalities are not available for this browser, try Chrome version instead.');
+		}
+		else {
+			console.log(entries.length+' files in local store');
+			for (var i=0; i<entries.length; ++i) {
+				var f = GFS.Elements.createFile(entries[i].fullPath, entries[i]);
+				f.displayAsLink($(GFS.Constants.Selectors.DOWNLOADING_LIST)[0]);
+			}
 		}
 	});
 });

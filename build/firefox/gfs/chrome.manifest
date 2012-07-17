@@ -1,0 +1,2 @@
+content     gfs    chrome/content/
+overlay chrome://browser/content/browser.xul chrome://gfs/content/gfsOverlay.xul

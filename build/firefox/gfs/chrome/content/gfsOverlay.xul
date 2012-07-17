@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<overlay id="gfs" 
+    xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+	<menupopup id="menu_ToolsPopup">
+		<menuitem id="GFS_menuitem" oncommand="window.open('chrome://gfs/content/gfs.html');" insertbefore="sanitizeSeparator" label="Open GFS" accesskey="o"/>
+	</menupopup>
+	<menupopup id="toolsPopup">
+		<menuitem id="GFS_menuitem" oncommand="window.open('gfs.html');" insertbefore="sanitizeSeparator" label="Open GFS" accesskey="o"/>
+	</menupopup>
+</overlay>

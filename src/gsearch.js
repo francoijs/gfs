@@ -884,6 +884,7 @@ var Search = (function() {
 	// TODO add extensions
 	var extensions = [
         ['wma', 'mp3', 'ogg', 'm4a', 'm4p', 'flac', 'alac'],
+        ['avi', 'mp4', 'mov', 'mpg', 'mkv'],
 	    ['pdf', 'doc', 'xls', 'ppt', 'pps', 'docx', 'xlsx', 'pptx', 'ppsx', 'odt', 'ods', 'odp'],
 		['gp3', 'gp4', 'gp5', 'gpx', 'gtp', 'ptb', 'tef', 'ly']
 	];
@@ -938,8 +939,8 @@ var Search = (function() {
 	                 , 'doxic.com'
 	];
 	// TODO greylist are e.g password-protected sites
-	var greylist = [     'wallywashis.name'
-	                   , 'pipl.com'
+	var greylist = [	'wallywashis.name'
+	                  , 'pipl.com'
 	];
 	var _blstr = (blacklist.length || greylist.length) ?
 			  ' -site:' + blacklist.concat(greylist).join(' -site:')

@@ -1,3 +1,6 @@
+
+all: crx xpi
+
 crx:
 	rsync -r  src lib gfx gfs.html manifest.json build/chrome/gfs/
 	./crxmake.sh build/chrome/gfs gfs.pem

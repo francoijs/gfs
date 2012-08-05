@@ -8,4 +8,4 @@ To install, download and open [gfs.crx](https://github.com/francoijs/gfs/blob/ma
 
 #### Firefox
 To install, download and open [gfs.xpi](https://github.com/francoijs/gfs/blob/master/gfs.xpi?raw=true) with Firefox.
-After installation, GFS is available with _Tools > Open GFS_).
+After installation, GFS is available with _Tools > Open GFS_.

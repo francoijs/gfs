@@ -24,8 +24,9 @@
 	<h3>Enter query:</h3>
 	<input type="text" id=myText value=""></input>
 	<select id=extensionsList>
-	<input type="button" name=searchButton value="search" onclick="GFS.Search.start()"></input>
 	<input type="button" value="clear" onclick="GFS.Search.clearQuery()"></input>
+	<input type="button" name=searchButton value="search" onclick="GFS.Search.start(false)"></input>
+	<input type="button" name=autoSearchButton value="auto-search!" onclick="GFS.Search.start(true)"></input>
 	<a style="padding-left: 1em;font-size:14px">max results: </a>
 	<input type="text" id=maxResults disabled=true value="8" style="width:35px">
 	<input type=button value="-" style="width:22px" onclick="GFS.Search.decResultsSize()">

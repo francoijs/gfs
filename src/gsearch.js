@@ -235,10 +235,11 @@ var Elements = (function() {
 		var _checkBoxJElement = undefined;
 		var _listJElement = undefined;
 		var _imgJElement = undefined;
+		var _titleJElement = undefined;
 		var self = undefined;
 		
 		/**
-		 * List and filter content of remote directory
+		 * List content of remote directory
 		 * @private
 		 * @name Directory#_explore
 		 * @memberOf Directory
@@ -286,6 +287,35 @@ var Elements = (function() {
 		};
 		
 		/**
+		 * Filter list of elements
+		 * @private
+		 * @name Directory#_explore
+		 * @memberOf Directory
+		 * @function
+		 * @param {Array} els array of elements
+		 * @return {Array} filtered result
+		 */
+		function _filter(els) {
+			var res = [];
+			// does the dir path match request?
+			if (_query.matchUri(_uri.toString())) {
+				// keep all elements
+				res = els;
+			}
+			else {
+				// keep only elements whose name matches request
+				els.forEach(function(l) {
+					if (_query.matchName(l.getName()) && _query.matchExt(l.getName())) {
+						res.push(l);
+						
+					}
+				});
+				console.log(res.length+' elements of '+_name+' match request');
+			}
+			return res;
+		};
+		
+		/**
 		 * Display content of directory
 		 * @private
 		 * @name Directory#_expand
@@ -295,38 +325,16 @@ var Elements = (function() {
 		 * @return {Directory} self
 		 */
 		function _expand(target) {
-			// does the dir path match request?
-			if (_query.matchUri(_uri.toString())) {
-				// display entire content of dir
-				self.getElements(function(els) {
-					if (!els) return;
-					els.forEach(function(l) {
-						var f = exports.create(l.getURL(), l.getURL(), _query);
-						f.addToResults(_listJElement);
-					});
-					// show checkbox
-					if (els.length)
-						_checkBoxJElement.css('visibility','visible');
+			self.getElements(function(els) {
+				if (!els) return;
+				els.forEach(function(l) {
+					var f = exports.create(l.getURL(), l.getURL(), _query);
+					f.addToResults(_listJElement);
 				});
-			}
-			else {
-				// display only elements whose name matches request
-				self.getElements(function(els) {
-					var n=0;
-					if (!els) return;
-					els.forEach(function(l) {
-						if (_query.matchName(l.getName()) && _query.matchExt(l.getName())) {
-							var f = exports.create(l.getURL(), l.getURL(), _query);
-							f.addToResults(_listJElement);
-							n++;
-						}
-					});
-					console.log(n+' elements of '+_name+' match request');
-					// show checkbox
-					if (n)
-						_checkBoxJElement.css('visibility','visible');
-				});
-			}
+				// show checkbox
+				if (els.length)
+					_checkBoxJElement.css('visibility','visible');
+			});
 			// next click collapses
 			target.unbind("click").click(function(e) {
 				e.stopPropagation();
@@ -430,21 +438,25 @@ var Elements = (function() {
 				getElements: function(cb) {
 					if (!_elements) {
 						// status=loading
-						_imgJElement.attr('src', Constants.Images.LOADING)
-							.css('visibility', 'visible');
+						if (_imgJElement)
+							_imgJElement.attr('src', Constants.Images.LOADING)
+								.css('visibility', 'visible');
 						// scan remote directory
 						_explore(_query, function(els) {
-							_elements = els;
 							if (!els) {
 								// status=error
-								_imgJElement.attr('src', Constants.Images.ERROR);
+								if (_imgJElement)
+									_imgJElement.attr('src', Constants.Images.ERROR);
+								_elements = undefined;
 							}
 							else {
 								// status=ok
-								_imgJElement.attr('src', Constants.Images.OK);								
+								if (_imgJElement)
+									_imgJElement.attr('src', Constants.Images.OK);								
+								_elements = _filter(els);
 							}
 							if (cb)
-								cb(els);
+								cb(_elements);
 						}); 
 					}
 					else
@@ -476,10 +488,10 @@ var Elements = (function() {
 					_imgJElement = el.eq(1)
 						.css('visibility','hidden');
 					// click expands directory content
-					var a = el.eq(2);
-					a.unbind("click").click(function(e) {
+					_titleJElement = el.eq(2);
+					_titleJElement.unbind("click").click(function(e) {
 						e.stopPropagation();
-						_expand(a);
+						_expand(_titleJElement);
 						return false;
 					});
 					// container for sub-elements
@@ -501,6 +513,20 @@ var Elements = (function() {
 					_checkBoxJElement.attr('checked', false);
 					if (cb)
 						cb(false);
+				},
+				
+				/**
+				 * Display content of directory
+				 * @public
+				 * @name Directory#open
+				 * @memberOf Directory
+				 * @function
+				 * @return {Directory} self
+				 */
+				open: function() {
+					if (_titleJElement)
+						_expand(_titleJElement);
+					return this;
 				}
 		};
 		
@@ -889,7 +915,7 @@ var Search = (function() {
 		['gp3', 'gp4', 'gp5', 'gpx', 'gtp', 'ptb', 'tef', 'ly']
 	];
 	var _extIndex = 0;
-	var _extstr = "";
+//	var _extstr = "";
 	
 	
 	/**
@@ -915,8 +941,8 @@ var Search = (function() {
 		}
 		el.change(function() {
 			_extIndex = el.val();
-			_extstr = extensions[_extIndex].join('|');
-			console.log('selected extensions '+_extstr);
+//			_extstr = extensions[_extIndex].join('|');
+			console.log('selected extensions '+extensions[_extIndex]);
 		}).change();
 	};
 
@@ -1005,8 +1031,7 @@ var Search = (function() {
 	
 	
 	/**
-	 * Callback for end of google search
-	 * Populates results list
+	 * Populates google search results list
 	 * @private
 	 * @name Search#onSearchComplete
 	 * @function
@@ -1023,8 +1048,48 @@ var Search = (function() {
 			var dir = Elements.createDirectory(
 					res.unescapedUrl, 
 					res.title, 
-					createQuery($(Constants.Selectors.QUERY_TEXT).val(), extensions[_extIndex]));
+					_query);
 			dir.addToResults($(Constants.Selectors.RESULTS_LIST)[0]);
+		});
+		
+		_totalHosts += searcher.results.length;
+		if(_totalHosts < _resultsSize) {
+			_page++;
+			searcher.gotoPage(_page);
+		}
+	}
+	
+	
+	/**
+	 * Process google search results and display relevant ones
+	 * @private
+	 * @name Search#onAutoSearchComplete
+	 * @function
+	 * @memberOf Search
+	 */
+	function onAutoSearchComplete(sc, searcher)  {
+		
+		if (   !searcher.results 
+			|| !searcher.results.length	)
+			return;
+		
+		searcher.results.forEach(function(res) {
+			var dir = Elements.createDirectory(
+					res.unescapedUrl, 
+					res.title,
+					_query);
+			console.log('searching in '+dir.getURL());
+			dir.getElements(function(els) {
+				if (els && els.length) {
+					console.log(els.length + ' elements in ' + dir.getURL());
+					dir.addToResults($(Constants.Selectors.RESULTS_LIST)[0]);
+					dir.open();
+					_resultsCount.set(_resultsCount.get() + els.length);
+				}
+				else {
+					console.log('nothing found in ' + dir.getURL());
+				}
+			});
 		});
 		
 		_totalHosts += searcher.results.length;
@@ -1056,53 +1121,75 @@ var Search = (function() {
 			});
 			return res;
 		}
+		
 		return {
+			
 			toString: function() {
 				return _crit.join(',');
 			},
+			
 			matchUri: function(uri) {
 				return _match(escape(uri));
 			},
+			
 			matchName: function(str) {
 				return _match(str);
 			},
+			
 			matchExt: function(str) {
 				var pt = str.lastIndexOf('.');
 				if (pt === -1)
 					return false;
 				return $.inArray(str.slice(pt+1), exts) !== -1;
+			},
+			
+			/**
+			 * Start a search with Google
+			 * @public
+			 * @name Query#executeWithGoogle
+			 * @function
+			 * @memberOf Query
+			 * @param onComplete processor for search results
+			 */
+			executeWithGoogle: function(onComplete) {
+				// Create a search control
+				var searchControl = new google.search.SearchControl();
+				// Add in a full set of searchers
+				searchControl.addSearcher(new google.search.WebSearch());
+				searchControl.setResultSetSize(google.search.Search.LARGE_RESULTSET);
+				
+				// tell the searcher to draw itself and tell it where to attach
+				// the following line is mandatory
+				searchControl.draw(document.getElementById("searchcontrol"));
+				searchControl.setSearchCompleteCallback(this, onComplete);
+				//  searchControl.setNoHtmlGeneration();
+				//  searchControl.setSearchStartingCallback(this, OnSearchStarting);
+				
+				//!! dont use 'size' in request or no answer ...
+				var request = "-inurl:(htm|html|php) +\"index of\" +\"last modified\" +\"parent directory\" +description "
+					+ ' +(' + exts.join('|') + ')' + ' +\"' + text + '\"'
+					+ ' ' + _blstr;
+				console.log('send request ' + request);
+				_page = 0;
+				searchControl.execute(request);
 			}
 		};
 	}
 	
-
+	// current search query
+	var _query;
+	
 	/**
-	 * Start a search with Google
+	 * Start a search
 	 * @public
 	 * @name Search#start
 	 * @function
 	 * @memberOf Search
+	 * @param auto true if autosearch required
 	 */
-	exports.start = function() {
-		// Create a search control
-		var searchControl = new google.search.SearchControl();
-		// Add in a full set of searchers
-		searchControl.addSearcher(new google.search.WebSearch());
-		searchControl.setResultSetSize(google.search.Search.LARGE_RESULTSET);
-		
-		// tell the searcher to draw itself and tell it where to attach
-		searchControl.draw(document.getElementById("searchcontrol"));
-		searchControl.setSearchCompleteCallback(this, onSearchComplete);
-		//  searchControl.setNoHtmlGeneration();
-		//  searchControl.setSearchStartingCallback(this, OnSearchStarting);
-		
-		//!! dont use 'size' in request or no answer ...
-		var request = "-inurl:(htm|html|php) +\"index of\" +\"last modified\" +\"parent directory\" +description "
-			+ ' +('+_extstr+')' + ' +\"' + $(Constants.Selectors.QUERY_TEXT).val() + '\"'
-			+ ' ' + _blstr;
-		console.log('send request ' + request);
-		_page = 0;
-		searchControl.execute(request);
+	exports.start = function(auto) {
+		_query = createQuery($(Constants.Selectors.QUERY_TEXT).val(), extensions[_extIndex]);
+		_query.executeWithGoogle(auto ? onAutoSearchComplete : onSearchComplete);
 	};
 	
 

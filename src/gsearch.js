@@ -249,6 +249,12 @@ var Elements = (function() {
 		 * @return {Directory} self
 		 */
 		function _explore(query, cb) {
+			// check hostname
+			if (!query.isValid(_uri)) {
+				console.log(_uri.toString()+' is blacklisted!');
+				cb();
+				return this;
+			}
 			console.log('fetching '+_uri.toString()+'...');
 			// result
 			var els = undefined;
@@ -298,7 +304,7 @@ var Elements = (function() {
 		function _filter(els) {
 			var res = [];
 			// does the dir path match request?
-			if (_query.matchUri(_uri.toString())) {
+			if (_query.matchUri(_uri)) {
 				// keep all elements
 				res = els;
 			}
@@ -947,8 +953,13 @@ var Search = (function() {
 	};
 
 	
-	// blacklist
-	var blacklist = [  'mp3mirror.com'
+	/** 
+	 * Blacklisted hosts
+	 * @private
+	 * @name Search#_blacklist
+	 * @memberOf Search
+	 */
+	var _blacklist = [ 'mp3mirror.com'
 	                 , 'vmp3.eu'
 	                 , 'mp3toss.com'
 	                 , 'listen77.com'
@@ -963,13 +974,12 @@ var Search = (function() {
 	                 , 'writeups.info'
 	                 , 'registryquick.net'
 	                 , 'doxic.com'
+	                 // following hosts are password-protected sites
+	                 , 'wallywashis.name'
+	                 , 'pipl.com'
 	];
-	// TODO greylist are e.g password-protected sites
-	var greylist = [	'wallywashis.name'
-	                  , 'pipl.com'
-	];
-	var _blstr = (blacklist.length || greylist.length) ?
-			  ' -site:' + blacklist.concat(greylist).join(' -site:')
+	var _blstr = _blacklist.length ?
+			  ' -site:' + _blacklist.join(' -site:')
 			: '';
 			  
 			  
@@ -1122,20 +1132,66 @@ var Search = (function() {
 			return res;
 		}
 		
+		/**
+		 * Query
+		 * @name Query
+		 * @memberOf Search
+		 */
 		return {
 			
 			toString: function() {
 				return _crit.join(',');
 			},
 			
+			/**
+			 * Test if URI matches query
+			 * @public
+			 * @name Query#matchUri
+			 * @function
+			 * @memberOf Query
+			 * @param {URI} uri
+			 * @return {Boolean}
+			 */
 			matchUri: function(uri) {
-				return _match(escape(uri));
+				return _match(escape(uri.toString()));
 			},
 			
+			/**
+			 * Test if URI is not blacklisted
+			 * @public
+			 * @name Query#isValid
+			 * @function
+			 * @memberOf Query
+			 * @param {URI} uri
+			 * @return {Boolean}
+			 */
+			isValid: function(uri) {
+				return _blacklist.indexOf(uri.domain(true)) === -1;
+			},
+			
+			/**
+			 * Test if name of file matches query
+			 * @public
+			 * @name Query#matchName
+			 * @function
+			 * @memberOf Query
+			 * @param {String} name
+			 * @return {Boolean}
+			 */
 			matchName: function(str) {
 				return _match(str);
 			},
 			
+			
+			/**
+			 * Test if name of file matches query extensions
+			 * @public
+			 * @name Query#matchExt
+			 * @function
+			 * @memberOf Query
+			 * @param {String} name
+			 * @return {Boolean}
+			 */
 			matchExt: function(str) {
 				var pt = str.lastIndexOf('.');
 				if (pt === -1)

@@ -215,6 +215,322 @@ var Elements = (function() {
 	
 	var exports = {};
 	
+
+	/**
+	 * Directory
+	 * @name Directory
+	 * @memberOf Elements
+	 */
+	function Directory(url, name, query) {
+		this._elements = undefined;
+		this._name = name;
+		this._query = query;
+		this._uri = new URI(url);
+		this._checkBoxJElement = undefined;
+		this._listJElement = undefined;
+		this._imgJElement = undefined;
+		this._titleJElement = undefined;
+	};
+	
+	Directory.prototype = {
+			
+			/**
+			 * List content of remote directory
+			 * @private
+			 * @name Directory#_explore
+			 * @memberOf Directory
+			 * @function
+			 * @param {Search.Query} query filter query
+			 * @param {Function} cb callback for end of exploration
+			 * @return {Directory} self
+			 */
+			_explore: function(query, cb) {
+				// check hostname
+				if (!query.isValid(this._uri)) {
+					console.log(this._uri.toString()+' is blacklisted!');
+					cb();
+					return this;
+				}
+				console.log('fetching '+this._uri.toString()+'...');
+				// result
+				var els = undefined;
+				// xhr
+				var self = this;
+				$.ajax({
+					url: this._uri.toString(),
+					cache: false,
+					dataType: "html",
+					error: function() {
+						console.log("url "+self._uri.toString()+" could not be loaded");
+						cb();
+					},
+					success: function(data) {			
+						// compensate for a potential trimming of <html> and <body> tags by browser
+						// (see http://stackoverflow.com/questions/8625928/parse-and-handle-dom-that-came-as-a-string-input)
+						data = '<div>'+data+'</div>';
+						
+						// look for a title such as 'Index of ...'
+						var h1 = $("TITLE:contains('Index of ')", data);
+						if (h1.length) {
+							var text = h1[0].textContent;
+							self._name = text.slice('Index of '.length);
+							console.log('scanning '+self._uri.toString()+'...');
+							els = Parser.getElements(data, self._query, self._uri.toString());
+							if (els) {
+								console.log('got '+els.length+' results from '+self._uri.toString());
+							}
+						}
+						else {
+							console.log('unable to parse content of '+self._uri.toString());
+						}
+						cb(els);
+					}
+				});
+				return this;
+			},
+			
+			/**
+			 * Filter list of elements
+			 * @private
+			 * @name Directory#_explore
+			 * @memberOf Directory
+			 * @function
+			 * @param {Array} els array of elements
+			 * @return {Array} filtered result
+			 */
+			_filter: function(els) {
+				var res = [];
+				// does the dir path match request?
+				if (this._query.matchUri(this._uri)) {
+					// keep all elements
+					res = els;
+				}
+				else {
+					// keep only elements whose name matches request
+					var self = this;
+					els.forEach(function(l) {
+						if (self._query.matchName(l.getName()) && self._query.matchExt(l.getName())) {
+							res.push(l);
+							
+						}
+					});
+					console.log(res.length+' elements of '+this._name+' match request');
+				}
+				return res;
+			},
+			
+			/**
+			 * Display content of directory
+			 * @private
+			 * @name Directory#_expand
+			 * @memberOf Directory
+			 * @function
+			 * @param {jQuery} target jQuery element for clickable directory name
+			 * @return {Directory} self
+			 */
+			_expand: function(target) {
+				var self = this;
+				this.getElements(function(els) {
+					if (!els) return;
+					els.forEach(function(l) {
+						var f = exports.create(l.getURL(), l.getURL(), self._query);
+						f.addToResults(self._listJElement);
+					});
+					// show checkbox
+					if (els.length)
+						self._checkBoxJElement.css('visibility','visible');
+				});
+				// next click collapses
+				target.unbind("click").click(function(e) {
+					e.stopPropagation();
+					self._collapse(target);
+					return false;
+				});
+				return this;
+			},
+			
+			/**
+			 * Hide content of directory
+			 * @private
+			 * @name Directory#_collapse
+			 * @memberOf Directory
+			 * @function
+			 * @param {jQuery} target jQuery element for clickable directory name
+			 * @return {Directory} self
+			 */
+			_collapse: function(target) {
+				// remove children
+				target.off('click');
+				this._listJElement.text('');
+				// hide checkbox
+				this._checkBoxJElement.css('visibility','hidden').attr('checked', false);
+				// next click will expand
+				var self = this;
+				target.unbind("click").click(function(e) {
+					e.stopPropagation();
+					self._expand(target);
+					return false;
+				});
+				return this;
+			},
+			
+			
+			/**
+			 * Select directory in list
+			 * @private
+			 * @name Directory#_select
+			 * @memberOf Directory
+			 * @function
+			 * @param {jQuery} jel jQuery checkbox element
+			 */
+			_select: function(jel) {
+				jel.data('myObject', this).attr('checked', true);
+				this._listJElement.find("input[type='checkbox']")
+					.attr('checked', true).change();
+			},
+			
+			/**
+			 * Unselect directory in list
+			 * @private
+			 * @name Directory#_unselect
+			 * @memberOf Directory
+			 * @function
+			 * @param {jQuery} jel jQuery checkbox element
+			 */
+			_unselect: function(jel) {
+				jel.removeData('myObject').attr('checked', false);
+				this._listJElement.find("input[type='checkbox']")
+					.attr('checked', false).change();
+			},
+
+			/**
+			 * Return URL of directory
+			 * @public
+			 * @name Directory#getURL
+			 * @function
+			 * return {String} URL of directory
+			 */
+			getURL: function() {
+				return this._uri.toString();
+			},
+			
+			/**
+			 * Return name of directory
+			 * @public
+			 * @name Directory#getName
+			 * @function
+			 * @return {String} URL of directory
+			 */
+			getName: function() {
+				return this._name;
+			},
+			
+			/**
+			 * Retrieve elements of directory
+			 * @public
+			 * @name Directory#getElements
+			 * @function
+			 * @param {Function} cb callback
+			 */
+			getElements: function(cb) {
+				if (!this._elements) {
+					// status=loading
+					if (this._imgJElement)
+						this._imgJElement.attr('src', Constants.Images.LOADING)
+							.css('visibility', 'visible');
+					// scan remote directory
+					var self = this;
+					this._explore(this._query, function(els) {
+						if (!els) {
+							// status=error
+							if (self._imgJElement)
+								self._imgJElement.attr('src', Constants.Images.ERROR);
+							self._elements = undefined;
+						}
+						else {
+							// status=ok
+							if (self._imgJElement)
+								self._imgJElement.attr('src', Constants.Images.OK);								
+							self._elements = self._filter(els);
+						}
+						if (cb)
+							cb(self._elements);
+					}); 
+				}
+				else
+					cb(this._elements);
+			},
+			
+			/**
+			 * Display directory in results list
+			 * @public
+			 * @name Directory#addToResults
+			 * @function
+			 * @param {DOMElement} parent parent DOM element
+			 * @return {DOMElement} new link DOM element
+			 */
+			addToResults: function(parent) {
+				var el = $("<input type='checkbox'></input><img width=16 height=16></img><a href='#'>" 
+						+ this._uri.toString() + "</a>" + " : " 
+						+ this._name + "<br><div></div>");
+				// prepend with a checkbox
+				var self = this;
+				this._checkBoxJElement = el.first()
+					.change(function() {
+						if (el.attr('checked'))
+							self._select(self._checkBoxJElement);
+						else
+							self._unselect(self._checkBoxJElement);
+					})
+					.css('visibility','hidden');
+				// status image
+				this._imgJElement = el.eq(1)
+					.css('visibility','hidden');
+				// click expands directory content
+				this._titleJElement = el.eq(2);
+				var self = this;
+				this._titleJElement.unbind("click").click(function(e) {
+					e.stopPropagation();
+					self._expand(self._titleJElement);
+					return false;
+				});
+				// container for sub-elements
+				this._listJElement = el.last()
+					.css('padding-left', '2em');
+				el.appendTo(parent);
+				return this._listJElement;
+			},
+			
+			/**
+			 * Stub: dirs cannot be saved
+			 * @public
+			 * @name Directory#saveToFile
+			 * @function
+			 * @param {FileSystem} fs target filesystem
+			 * @param {Function} cb callback for end of write
+			 */
+			saveToFile: function(fs, cb) {
+				this._checkBoxJElement.attr('checked', false);
+				if (cb)
+					cb(false);
+			},
+			
+			/**
+			 * Display content of directory
+			 * @public
+			 * @name Directory#open
+			 * @memberOf Directory
+			 * @function
+			 * @return {Directory} self
+			 */
+			open: function() {
+				if (this._titleJElement)
+					this._expand(this._titleJElement);
+				return this;
+			}
+	};
+	
+	
 	/**
 	 * Create object Directory
 	 * @private
@@ -228,317 +544,9 @@ var Elements = (function() {
 	 */
 	function createDir(url, name, query) {
 		
-		var _elements = undefined;
-		var _name = name;
-		var _query = query;
-		var _uri = new URI(url);
-		var _checkBoxJElement = undefined;
-		var _listJElement = undefined;
-		var _imgJElement = undefined;
-		var _titleJElement = undefined;
-		var self = undefined;
-		
-		/**
-		 * List content of remote directory
-		 * @private
-		 * @name Directory#_explore
-		 * @memberOf Directory
-		 * @function
-		 * @param {Search.Query} query filter query
-		 * @param {Function} cb callback for end of exploration
-		 * @return {Directory} self
-		 */
-		function _explore(query, cb) {
-			// check hostname
-			if (!query.isValid(_uri)) {
-				console.log(_uri.toString()+' is blacklisted!');
-				cb();
-				return this;
-			}
-			console.log('fetching '+_uri.toString()+'...');
-			// result
-			var els = undefined;
-			// xhr
-			$.ajax({
-				url: _uri.toString(),
-				cache: false,
-				dataType: "html",
-				error: function() {
-					console.log("url "+_uri.toString()+" could not be loaded");
-					cb();
-				},
-				success: function(data) {			
-					// compensate for a potential trimming of <html> and <body> tags by browser
-					// (see http://stackoverflow.com/questions/8625928/parse-and-handle-dom-that-came-as-a-string-input)
-					data = '<div>'+data+'</div>';
-					
-					// look for a title such as 'Index of ...'
-					var h1 = $("TITLE:contains('Index of ')", data);
-					if (h1.length) {
-						var text = h1[0].textContent;
-						_name = text.slice('Index of '.length);
-						console.log('scanning '+_uri.toString()+'...');
-						els = Parser.getElements(data, _query, _uri.toString());
-						if (els) {
-							console.log('got '+els.length+' results from '+_uri.toString());
-						}
-					}
-					else {
-						console.log('unable to parse content of '+_uri.toString());
-					}
-					cb(els);
-				}
-			});
-			return this;
-		};
-		
-		/**
-		 * Filter list of elements
-		 * @private
-		 * @name Directory#_explore
-		 * @memberOf Directory
-		 * @function
-		 * @param {Array} els array of elements
-		 * @return {Array} filtered result
-		 */
-		function _filter(els) {
-			var res = [];
-			// does the dir path match request?
-			if (_query.matchUri(_uri)) {
-				// keep all elements
-				res = els;
-			}
-			else {
-				// keep only elements whose name matches request
-				els.forEach(function(l) {
-					if (_query.matchName(l.getName()) && _query.matchExt(l.getName())) {
-						res.push(l);
-						
-					}
-				});
-				console.log(res.length+' elements of '+_name+' match request');
-			}
-			return res;
-		};
-		
-		/**
-		 * Display content of directory
-		 * @private
-		 * @name Directory#_expand
-		 * @memberOf Directory
-		 * @function
-		 * @param {jQuery} target jQuery element for clickable directory name
-		 * @return {Directory} self
-		 */
-		function _expand(target) {
-			self.getElements(function(els) {
-				if (!els) return;
-				els.forEach(function(l) {
-					var f = exports.create(l.getURL(), l.getURL(), _query);
-					f.addToResults(_listJElement);
-				});
-				// show checkbox
-				if (els.length)
-					_checkBoxJElement.css('visibility','visible');
-			});
-			// next click collapses
-			target.unbind("click").click(function(e) {
-				e.stopPropagation();
-				_collapse(target);
-				return false;
-			});
-			return this;
-		}
-		
-		/**
-		 * Hide content of directory
-		 * @private
-		 * @name Directory#_collapse
-		 * @memberOf Directory
-		 * @function
-		 * @param {jQuery} target jQuery element for clickable directory name
-		 * @return {Directory} self
-		 */
-		function _collapse(target) {
-			// remove children
-			target.off('click');
-			_listJElement.text('');
-			// hide checkbox
-			_checkBoxJElement.css('visibility','hidden').attr('checked', false);
-			// next click will expand
-			target.unbind("click").click(function(e) {
-				e.stopPropagation();
-				_expand(target);
-				return false;
-			});
-			return this;
-		}
-		
-		
-		/**
-		 * Select directory in list
-		 * @private
-		 * @name Directory#_select
-		 * @memberOf Directory
-		 * @function
-		 * @param {jQuery} jel jQuery checkbox element
-		 */
-		function _select(jel) {
-			jel.data('myObject', self).attr('checked', true);
-			_listJElement.find("input[type='checkbox']")
-				.attr('checked', true).change();
-		}
-		
-		/**
-		 * Unselect directory in list
-		 * @private
-		 * @name Directory#_unselect
-		 * @memberOf Directory
-		 * @function
-		 * @param {jQuery} jel jQuery checkbox element
-		 */
-		function _unselect(jel) {
-			jel.removeData('myObject').attr('checked', false);
-			_listJElement.find("input[type='checkbox']")
-				.attr('checked', false).change();
-		}
-
-		/**
-		 * Directory
-		 * @name Directory
-		 * @memberOf Elements
-		 */
-		function Directory() {};
-		
-		Directory.prototype = {
-				
-				/**
-				 * Return URL of directory
-				 * @public
-				 * @name Directory#getURL
-				 * @function
-				 * return {String} URL of directory
-				 */
-				getURL: function() {
-					return _uri.toString();
-				},
-				
-				/**
-				 * Return name of directory
-				 * @public
-				 * @name Directory#getName
-				 * @function
-				 * @return {String} URL of directory
-				 */
-				getName: function() {
-					return _name;
-				},
-				
-				/**
-				 * Retrieve elements of directory
-				 * @public
-				 * @name Directory#getElements
-				 * @function
-				 * @param {Function} cb callback
-				 */
-				getElements: function(cb) {
-					if (!_elements) {
-						// status=loading
-						if (_imgJElement)
-							_imgJElement.attr('src', Constants.Images.LOADING)
-								.css('visibility', 'visible');
-						// scan remote directory
-						_explore(_query, function(els) {
-							if (!els) {
-								// status=error
-								if (_imgJElement)
-									_imgJElement.attr('src', Constants.Images.ERROR);
-								_elements = undefined;
-							}
-							else {
-								// status=ok
-								if (_imgJElement)
-									_imgJElement.attr('src', Constants.Images.OK);								
-								_elements = _filter(els);
-							}
-							if (cb)
-								cb(_elements);
-						}); 
-					}
-					else
-						cb(_elements);
-				},
-				
-				/**
-				 * Display directory in results list
-				 * @public
-				 * @name Directory#addToResults
-				 * @function
-				 * @param {DOMElement} parent parent DOM element
-				 * @return {DOMElement} new link DOM element
-				 */
-				addToResults: function(parent) {
-					var el = $("<input type='checkbox'></input><img width=16 height=16></img><a href='#'>" 
-							+ _uri.toString() + "</a>" + " : " 
-							+ _name + "<br><div></div>");
-					// prepend with a checkbox
-					_checkBoxJElement = el.first()
-						.change(function() {
-							if (el.attr('checked'))
-								_select(_checkBoxJElement);
-							else
-								_unselect(_checkBoxJElement);
-						})
-						.css('visibility','hidden');
-					// status image
-					_imgJElement = el.eq(1)
-						.css('visibility','hidden');
-					// click expands directory content
-					_titleJElement = el.eq(2);
-					_titleJElement.unbind("click").click(function(e) {
-						e.stopPropagation();
-						_expand(_titleJElement);
-						return false;
-					});
-					// container for sub-elements
-					_listJElement = el.last()
-						.css('padding-left', '2em');
-					el.appendTo(parent);
-					return _listJElement;
-				},
-				
-				/**
-				 * Stub: dirs cannot be saved
-				 * @public
-				 * @name Directory#saveToFile
-				 * @function
-				 * @param {FileSystem} fs target filesystem
-				 * @param {Function} cb callback for end of write
-				 */
-				saveToFile: function(fs, cb) {
-					_checkBoxJElement.attr('checked', false);
-					if (cb)
-						cb(false);
-				},
-				
-				/**
-				 * Display content of directory
-				 * @public
-				 * @name Directory#open
-				 * @memberOf Directory
-				 * @function
-				 * @return {Directory} self
-				 */
-				open: function() {
-					if (_titleJElement)
-						_expand(_titleJElement);
-					return this;
-				}
-		};
-		
-		return self = new Directory();
+		return new Directory(url, name, query);
 	}
-	
+
 	
 	/**
 	 * Create object File
@@ -552,318 +560,324 @@ var Elements = (function() {
 	 */
 	function createFile(url, entry) {
 		
+		return new File(url, entry);
+	}
+	
+		
+	/**
+	 * File
+	 * @name File
+	 * @memberOf Elements
+	 */
+	function File(url, entry) {
+		
 		// extract file name from url
-		var _uri = new URI(url);
+		this._uri = new URI(url);
 		// FIXME: when _uri contains a query, filename returns ""
-		var _name = unescape(_uri.filename());
-		var _listJElement = undefined;
-		var _localFSEntry = entry;
-		var _statusJElement = undefined;
-		var _localJElement = undefined;
-		var file = undefined;
-		
-		/**
-		 * Select file in list
-		 * @private
-		 * @name File#_select
-		 * @memberOf File
-		 * @function
-		 * @param {jQuery} jel jQuery checkbox element
-		 */
-		function _select(jel) {
-			jel.data('myObject', file).attr('checked', true);
-		}
-		
-		/**
-		 * Unselect file in list
-		 * @private
-		 * @name File#_unselect
-		 * @memberOf File
-		 * @function
-		 * @param {jQuery} jel jQuery checkbox element
-		 */
-		function _unselect(jel) {
-			jel.removeData('myObject').attr('checked', false);
-		}
-		
-		/**
-		 * File
-		 * @name File
-		 * @memberOf Elements
-		 */
-		function File() {};
-		
-		File.prototype = {
-				
-				/**
-				 * Return URL of file
-				 * @public
-				 * @name File#getURL
-				 * @function
-				 * @return {String} URL of file
-				 */
-				getURL: function() {
-					return _uri.toString();
-				},
-				
-				
-				/**
-				 * Return URL of file on the local filesystem
-				 * @public
-				 * @name File#getLocalURL
-				 * @function
-				 * @return {String} local URL of file
-				 */
-				getLocalURL: function() {
-					return _localFSEntry.toURL();
-				},
-				
-				
-				/**
-				 * Return name of file
-				 * @public
-				 * @name File#getName
-				 * @function
-				 * @return {String} name of file
-				 */
-				getName: function() {
-					return _name;
-				},
-				
-				
-				/**
-				 * Display file in DOM as a checkbox
-				 * @public
-				 * @name File#addToResults
-				 * @function
-				 * @param {DOMElement} parent parent DOM element
-				 * @return {DOMElement} new checkbox DOM element
-				 */
-				addToResults: function(parent) {
-					var el = $("<input type='checkbox'>"
-							+ _name + "</input><br>");
-					// manage select/unselect
-					el.change(function(e) {
-						if (el.attr('checked'))
-							_select(_listJElement);
-						else
-							_unselect(_listJElement);
-					});
-					el.appendTo(parent);
-					return _listJElement = el.first();
-				},
-				
-				
-				/**
-				 * Display file as a draggable link to local file
-				 * @public
-				 * @name File#displayAsLink
-				 * @function
-				 * @param {DOMElement} parent parent DOM element
-				 * @return {DOMElement} new link DOM element
-				 */
-				displayAsLink: function(parent) {
-					_localJElement = $("<input type='checkbox'></input><a href='"+this.getLocalURL()+"'"
-							+ " class='dragout' draggable='true'"
-							+ ' data-downloadurl="application/octet-stream:'+escape(_name)+':'+this.getLocalURL()+'">'
-							+ _name + "</a><br>");
-					// manage select/unselect
-					var cbox = _localJElement.first();
-					cbox.change(function(e) {
-						if (cbox.attr('checked'))
-							_select(cbox);
-						else
-							_unselect(cbox);
-					});
-					// manage click
-					var self = this;
-					var a = _localJElement.eq(1);
-					a.unbind("click").click(function() {
-						console.log('opening: '+self.getName()+'...');
-						window.open(self.getLocalURL(), self.getName());
-						return false;
-					});
-					// manage drag out
-					a[0].addEventListener('dragstart', function(evt) {
-						evt.dataTransfer.setData('DownloadURL', this.getAttribute('data-downloadurl'));
-						console.log('dragging: '+_name+'...');
-					}, false);
-					_localJElement.appendTo(parent);
-					return this;
-				},
-				
-				
-				/**
-				 * Remove local file and link
-				 * @public
-				 * @name File#removeLink
-				 * @function
-				 */
-				removeLink: function() {
-					// remove from list
-					_localJElement.remove();
-					// remove from local store
-					_localFSEntry.remove(function() {
-						console.log('file '+_localFSEntry.name+' removed');
-					}, function(e) {
-						console.log('error removing '+_localFSEntry.name+': '+LocalStorage.getFileErrorMsg(e));
-					});
-					return this;
-				},
-				
-				
-				/**
-				 * Display file with its download status
-				 * @public
-				 * @name File#displayAsDownloading
-				 * @function
-				 * @param {DOMElement} parent parent DOM element
-				 * @return {Function} progress info update function
-				 */
-				displayAsDownloading: function(parent) {
-					_statusJElement = $("<input type='checkbox'></input><a>"+_name+"   </a><a></a><br>");
-					// checkbox is invisible, only for left alignment
-					_statusJElement.first().css('visibility', 'hidden');
-					_statusJElement.appendTo(parent);
-					// return status update function
-					return function(status) {
-						_statusJElement.eq(2).html(status);
-					};
-				},	
-				
-				
-				/**
-				 * Remove downloading file
-				 * @public
-				 * @name File#removeDownloading
-				 * @function
-				 */
-				removeDownloading: function() {
-					// remove from list
-					_statusJElement.remove();
-					return this;
-				},
-				
-				
-				/**
-				 * Start download of file
-				 * @public
-				 * @name File#download
-				 * @function
-				 * @param {Function} end callback for end of download
-				 * @param {Function} update callback to update download status
-				 * @return {File} self
-				 */
-				download: function(end, update) {
-					var req = new XMLHttpRequest();
-					req.open('GET', _uri.toString(), true);
-					// FIXME: selecting type 'blob' triggers 'onload' with response=null 
-					req.responseType = 'arraybuffer';
-					req.onprogress = function(event) {
-						var text = '';
-						switch (req.readyState) {
-						case 1: 
-							text = 'Open...';
-							break;
-						case 2:
-							text = 'Sent...';
-							break;
-						case 3:
-							text = (new Number(100*event.loaded/event.total)).toFixed(0)+'%';
-							break;
-						case 4:
-							text = 'Loaded ('+event.loaded+'B)';
-							break;
-						default:
-							break;
+		this._name = unescape(this._uri.filename());
+		this._listJElement = undefined;
+		this._localFSEntry = entry;
+		this._statusJElement = undefined;
+		this._localJElement = undefined;
+	};		
+	
+	File.prototype = {
+			
+			/**
+			 * Select file in list
+			 * @private
+			 * @name File#_select
+			 * @memberOf File
+			 * @function
+			 * @param {jQuery} jel jQuery checkbox element
+			 */
+			_select: function(jel) {
+				jel.data('myObject', this).attr('checked', true);
+			},
+			
+			/**
+			 * Unselect file in list
+			 * @private
+			 * @name File#_unselect
+			 * @memberOf File
+			 * @function
+			 * @param {jQuery} jel jQuery checkbox element
+			 */
+			_unselect: function(jel) {
+				jel.removeData('myObject').attr('checked', false);
+			},
+
+			/**
+			 * Return URL of file
+			 * @public
+			 * @name File#getURL
+			 * @function
+			 * @return {String} URL of file
+			 */
+			getURL: function() {
+				return this._uri.toString();
+			},
+			
+			
+			/**
+			 * Return URL of file on the local filesystem
+			 * @public
+			 * @name File#getLocalURL
+			 * @function
+			 * @return {String} local URL of file
+			 */
+			getLocalURL: function() {
+				return this._localFSEntry.toURL();
+			},
+			
+			
+			/**
+			 * Return name of file
+			 * @public
+			 * @name File#getName
+			 * @function
+			 * @return {String} name of file
+			 */
+			getName: function() {
+				return this._name;
+			},
+			
+			
+			/**
+			 * Display file in DOM as a checkbox
+			 * @public
+			 * @name File#addToResults
+			 * @function
+			 * @param {DOMElement} parent parent DOM element
+			 * @return {DOMElement} new checkbox DOM element
+			 */
+			addToResults: function(parent) {
+				var el = $("<input type='checkbox'>"
+						+ this._name + "</input><br>");
+				// manage select/unselect
+				var self = this;
+				el.change(function(e) {
+					if (el.attr('checked'))
+						self._select(self._listJElement);
+					else
+						self._unselect(self._listJElement);
+				});
+				el.appendTo(parent);
+				return this._listJElement = el.first();
+			},
+			
+			
+			/**
+			 * Display file as a draggable link to local file
+			 * @public
+			 * @name File#displayAsLink
+			 * @function
+			 * @param {DOMElement} parent parent DOM element
+			 * @return {DOMElement} new link DOM element
+			 */
+			displayAsLink: function(parent) {
+				this._localJElement = $("<input type='checkbox'></input><a href='"+this.getLocalURL()+"'"
+						+ " class='dragout' draggable='true'"
+						+ ' data-downloadurl="application/octet-stream:'+escape(this._name)+':'+this.getLocalURL()+'">'
+						+ this._name + "</a><br>");
+				// manage select/unselect
+				var cbox = this._localJElement.first();
+				var self = this;
+				cbox.change(function(e) {
+					if (cbox.attr('checked'))
+						self._select(cbox);
+					else
+						self._unselect(cbox);
+				});
+				// manage click
+				var a = this._localJElement.eq(1);
+				a.unbind("click").click(function() {
+					console.log('opening: '+self.getName()+'...');
+					window.open(self.getLocalURL(), self.getName());
+					return false;
+				});
+				// manage drag out
+				a[0].addEventListener('dragstart', function(evt) {
+					evt.dataTransfer.setData('DownloadURL', this.getAttribute('data-downloadurl'));
+					console.log('dragging: '+this._name+'...');
+				}, false);
+				this._localJElement.appendTo(parent);
+				return this;
+			},
+			
+			
+			/**
+			 * Remove local file and link
+			 * @public
+			 * @name File#removeLink
+			 * @function
+			 */
+			removeLink: function() {
+				// remove from list
+				this._localJElement.remove();
+				// remove from local store
+				var self = this;
+				this._localFSEntry.remove(function() {
+					console.log('file '+self._localFSEntry.name+' removed');
+				}, function(e) {
+					console.log('error removing '+self._localFSEntry.name+': '+LocalStorage.getFileErrorMsg(e));
+				});
+				return this;
+			},
+			
+			
+			/**
+			 * Display file with its download status
+			 * @public
+			 * @name File#displayAsDownloading
+			 * @function
+			 * @param {DOMElement} parent parent DOM element
+			 * @return {Function} progress info update function
+			 */
+			displayAsDownloading: function(parent) {
+				this._statusJElement = $("<input type='checkbox'></input><a>"+this._name+"   </a><a></a><br>");
+				// checkbox is invisible, only for left alignment
+				this._statusJElement.first().css('visibility', 'hidden');
+				this._statusJElement.appendTo(parent);
+				// return status update function
+				var self = this;
+				return function(status) {
+					self._statusJElement.eq(2).html(status);
+				};
+			},	
+			
+			
+			/**
+			 * Remove downloading file
+			 * @public
+			 * @name File#removeDownloading
+			 * @function
+			 */
+			removeDownloading: function() {
+				// remove from list
+				this._statusJElement.remove();
+				return this;
+			},
+			
+			
+			/**
+			 * Start download of file
+			 * @public
+			 * @name File#download
+			 * @function
+			 * @param {Function} end callback for end of download
+			 * @param {Function} update callback to update download status
+			 * @return {File} self
+			 */
+			download: function(end, update) {
+				var req = new XMLHttpRequest();
+				req.open('GET', this._uri.toString(), true);
+				// FIXME: selecting type 'blob' triggers 'onload' with response=null 
+				req.responseType = 'arraybuffer';
+				req.onprogress = function(event) {
+					var text = '';
+					switch (req.readyState) {
+					case 1: 
+						text = 'Open...';
+						break;
+					case 2:
+						text = 'Sent...';
+						break;
+					case 3:
+						text = (new Number(100*event.loaded/event.total)).toFixed(0)+'%';
+						break;
+					case 4:
+						text = 'Loaded ('+event.loaded+'B)';
+						break;
+					default:
+						break;
+					}
+					if (update)
+						update(text);
+					if (req.status != 200) 
+						throw 'file download failed for '+this._uri.toString();
+				};
+				req.onload = function() {
+					if ((this.status === 200) && end) {
+						var bb = new BlobBuilder();
+					    bb.append(this.response);
+					    end(bb.getBlob('application/octet-stream'));
+					}
+				};
+				console.log('downloading: '+this._uri.toString()+'...');
+				req.send();
+				return this;
+			},
+			
+			
+			/**
+			 * Download and save file to a given filesystem
+			 * @public
+			 * @name File#saveToFile
+			 * @function
+			 * @param {FileSystem} fs target filesystem
+			 * @param {Function} cb callback for end of write
+			 * @return {File} self
+			 */
+			saveToFile: function(fs, cb) {
+				var self = this;
+				LocalStorage.createFile(
+						fs,
+						this._name,
+						function(entry) {
+							self._localFSEntry = entry;
+							self.download(
+									function(data) {
+										console.log('downloaded '+data.size+'B');
+										self._unselect(self._listJElement);
+										LocalStorage.writeToFile(
+												entry,
+												data,
+												function(res) {
+													if (cb)
+														cb(res, self);
+												});		
+									},
+									// display as downloading and get update function
+									self.displayAsDownloading($(Constants.Selectors.DOWNLOADING_LIST)[0])
+							);
 						}
-						if (update)
-							update(text);
-						if (req.status != 200) 
-							throw 'file download failed for '+_uri.toString();
+				);
+				return this;
+			},
+			
+			
+			/**
+			 * Read content of local file if available
+			 * @public
+			 * @name File#readFile
+			 * @function
+			 * @param {Function} cb callback for end of reading
+			 * @return {File} self
+			 */
+			readFile: function(cb) {
+				if (!this._localFSEntry)
+					if (cb)
+						cb(false);
+				var self = this;
+				this._localFSEntry.file(function(file) {
+					var reader = new FileReader();
+					reader.onloadend = function(e) {
+						if (cb)
+							cb(true, e.target.result);
 					};
-					req.onload = function() {
-						if ((this.status === 200) && end) {
-							var bb = new BlobBuilder();
-						    bb.append(this.response);
-						    end(bb.getBlob('application/octet-stream'));
-						}
-					};
-					console.log('downloading: '+_uri.toString()+'...');
-					req.send();
-					return this;
-				},
-				
-				
-				/**
-				 * Download and save file to a given filesystem
-				 * @public
-				 * @name File#saveToFile
-				 * @function
-				 * @param {FileSystem} fs target filesystem
-				 * @param {Function} cb callback for end of write
-				 * @return {File} self
-				 */
-				saveToFile: function(fs, cb) {
-					var self = this;
-					LocalStorage.createFile(
-							fs,
-							_name,
-							function(entry) {
-								_localFSEntry = entry;
-								self.download(
-										function(data) {
-											console.log('downloaded '+data.size+'B');
-											_unselect(_listJElement);
-											LocalStorage.writeToFile(
-													entry,
-													data,
-													function(res) {
-														if (cb)
-															cb(res, self);
-													});		
-										},
-										// display as downloading and get update function
-										self.displayAsDownloading($(Constants.Selectors.DOWNLOADING_LIST)[0])
-								);
-							}
-					);
-					return this;
-				},
-				
-				
-				/**
-				 * Read content of local file if available
-				 * @public
-				 * @name File#readFile
-				 * @function
-				 * @param {Function} cb callback for end of reading
-				 * @return {File} self
-				 */
-				readFile: function(cb) {
-					if (!_localFSEntry)
+					reader.onerror = function(error) {
+						console.log('failed to open file '+self._localFSEntry.name+': '
+									+LocalStorage.getFileErrorMsg(error));
 						if (cb)
 							cb(false);
-					_localFSEntry.file(function(file) {
-						var reader = new FileReader();
-						reader.onloadend = function(e) {
-							if (cb)
-								cb(true, this.result);
-						};
-						reader.onerror = function(error) {
-							console.log('failed to open file '+_localFSEntry.name+': '+LocalStorage.getFileErrorMsg(error));
-							if (cb)
-								cb(false);
-						};
-						console.log('opening file '+_localFSEntry.name+'...');
-						reader.readAsBinaryString(file);
-					});
-					return this;					
-				},
-				
-		};
-		return file = new File();
-	}
+					};
+					console.log('opening file '+self._localFSEntry.name+'...');
+					reader.readAsBinaryString(file);
+				});
+				return this;					
+			}
+	};
 	
 	
 	/**
@@ -974,6 +988,7 @@ var Search = (function() {
 	                 , 'writeups.info'
 	                 , 'registryquick.net'
 	                 , 'doxic.com'
+	                 , 'lokys.net'
 	                 // following hosts are password-protected sites
 	                 , 'wallywashis.name'
 	                 , 'pipl.com'

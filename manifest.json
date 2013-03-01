@@ -1,17 +1,18 @@
 {
-  "name": "Interesting files",
-  "version": "0.1",
-  "permissions": [
-    "http://*/*",
-    "https://*/*"
+	"name": "Interesting files (test)",
+	"manifest_version": 1,
+	"version": "0.1",
+	"permissions": [
+		"http://*/*",
+		"https://*/*"
     ],
   	"icons": {
     	"256": "gfx/icon-256.png"
   	},
     "app": {
 	    "launch": {
-	      "local_path": "gfs.html"
-    }
-  }
-   
+			"local_path": "gfs.html"
+		}
+	}
+	
 }

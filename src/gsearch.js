@@ -274,14 +274,19 @@ var Elements = (function() {
 						if (h1.length) {
 							var text = h1[0].textContent;
 							self._name = text.slice('Index of '.length);
-							console.log('scanning '+self._uri.toString()+'...');
-							els = Parser.getElements(data, self._query, self._uri.toString());
+							var path = self._uri.toString();
+							// removes any trailing char after last '/'
+							var sl = path.lastIndexOf('/')+1;
+							if (sl && sl<path.length)
+								path = path.slice(0, sl);
+							console.log('scanning '+path+'...');
+							els = Parser.getElements(data, self._query, path);
 							if (els) {
-								console.log('got '+els.length+' results from '+self._uri.toString());
+								console.log('got '+els.length+' results from '+path);
 							}
 						}
 						else {
-							console.log('unable to parse content of '+self._uri.toString());
+							console.log('unable to parse content of '+path);
 						}
 						cb(els);
 					}

@@ -807,9 +807,9 @@ var Elements = (function() {
 				};
 				req.onload = function() {
 					if ((this.status === 200) && end) {
-						var bb = new BlobBuilder();
-					    bb.append(this.response);
-					    end(bb.getBlob('application/octet-stream'));
+						var bb = new Blob([this.response], 
+										  {type:'application/octet-stream'});
+					    end(bb);
 					}
 				};
 				console.log('downloading: '+this._uri.toString()+'...');
@@ -1569,11 +1569,11 @@ var Download = (function() {
 										ia[i] = zipdata.charCodeAt(i);
 									}
 									// Create a new Blob and write it
-									var bb = new BlobBuilder(); // Note: window.WebKitBlobBuilder in Chrome 12.
-									bb.append(ab);
+									var bb = new Blob([ab], 
+													  {type:'application/octet-stream'});
 									LocalStorage.writeToFile(
 											entry,
-											bb.getBlob('application/octet-stream'),
+											bb,
 											function(res) {
 												// free buffer
 												zipdata = null;

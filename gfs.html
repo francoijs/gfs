@@ -6,16 +6,19 @@
     <title>GFS</title>
     <link rel="icon" type="image/png" href="gfx/icon-256.png"/>
     <script src="lib/jquery.min.js"></script>
- 	<script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.7.2/jquery-ui.js"></script>
+ 	<link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/themes/smoothness/jquery-ui.css" />
+	<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js"></script>
+	<!--script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.7.2/jquery-ui.js"></script-->
     <script src="lib/URI.min.js" type="text/javascript"></script>
     <script src="lib/jquery.URI.js" type="text/javascript"></script>
     <script src="lib/jszip.js" type="text/javascript"></script>
     <script src="lib/jszip-inflate.js" type="text/javascript"></script>
     <script src="lib/jszip-deflate.js" type="text/javascript"></script>
     <script src="lib/jszip-load.js" type="text/javascript"></script>
-    <script src="http://www.google.com/jsapi" type="text/javascript"></script>
-    <script language="Javascript" src="src/gsearch.js">
-    </script>
+    <script src="lib/jsapi.js" type="text/javascript"></script>
+    <script src="lib/idb.filesystem.js"></script>
+    <script src="src/localstorage.js"></script>
+    <script src="src/gsearch.js"></script>
   </head>
   <body>
 
@@ -24,24 +27,24 @@
 	<h3>Enter query:</h3>
 	<input type="text" id=myText value=""></input>
 	<select id=extensionsList>
-	<input type="button" value="clear" onclick="GFS.Search.clearQuery()"></input>
-	<input type="button" name=searchButton value="search" onclick="GFS.Search.start(false)"></input>
-	<input type="button" name=autoSearchButton value="auto-search!" onclick="GFS.Search.start(true)"></input>
+	<input type="button" name=clearButton value="clear"></input>
+	<input type="button" name=searchButton value="search"></input>
+	<input type="button" name=autoSearchButton value="auto-search!"></input>
 	<a style="padding-left: 1em;font-size:14px">max results: </a>
 	<input type="text" id=maxResults disabled=true value="8" style="width:35px">
-	<input type=button value="-" style="width:22px" onclick="GFS.Search.decResultsSize()">
-	<input type=button value="+" style="width:22px" onclick="GFS.Search.incResultsSize()">
+	<input type=button name=decResults value="-" style="width:22px">
+	<input type=button name=incResults value="+" style="width:22px">
 	<hr>
 	
 	<h3 id=resultsCount>Results: 0</h3>
 	<div id=results></div>
 	<br>
-	<input type="button" name=dlButton value="download" onclick="GFS.Download.start()"/></input>
-	<input type="button" name=clearButton value="clear" onclick="GFS.Search.clear()"></input>
+	<input type="button" name=dlButton value="download"></input>
+	<input type="button" name=clearDlButton value="clear"></input>
 	<a style="padding-left: 1em;font-size:14px">max connections: </a>
 	<input type="text" id=maxDownloads disabled=true value="3" style="width:35px" />
-	<input type=button value="-" style="width:22px" onclick="GFS.Download.decMaxDownload()">
-	<input type="button" value="+" style="width:22px" onclick="GFS.Download.incMaxDownload()">
+	<input type=button name=decMaxDownload value="-" style="width:22px">
+	<input type="button" name=incMaxDownload value="+" style="width:22px">
 	<hr>
 	
 	<h3>Downloads:</h3>
@@ -50,10 +53,14 @@
 		<br>
 		<div id="dlButtons">
 			<input type="button" name=selectDlButton value="select all"></input>
-			<input type="button" name=zipDlButton value="zip" onclick="GFS.Download.zip()"></input>
-			<input type="button" name=clearDlButton value="remove" onclick="GFS.Download.clear()"></input>
+			<input type="button" name=zipDlButton value="zip"></input>
+			<input type="button" name=clearDlButton value="remove"></input>
 		</div>
 	</div>
+
+	<hr>
+	<h3>Click on 'web' below to complete a search...</h3>
+	<div id=searchcontrol></div>
 
   </body>
 </html>

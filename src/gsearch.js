@@ -223,6 +223,9 @@ var Elements = (function() {
 	 * Directory
 	 * @name Directory
 	 * @memberOf Elements
+         * @param url url of remote directory
+         * @param name name
+         * @param query to apply do directory
 	 */
 	function Directory(url, name, query) {
 		this._elements = undefined;
@@ -576,6 +579,8 @@ var Elements = (function() {
 	 * File
 	 * @name File
 	 * @memberOf Elements
+         * @param {string} url url of remote file
+         * @param {string} entry 
 	 */
 	function File(url, entry) {
 		
@@ -802,7 +807,7 @@ var Elements = (function() {
 					}
 					if (update)
 						update(text);
-					if (req.status != 200) 
+					if (req.status !== 200) 
 						throw 'file download failed for '+this._uri.toString();
 				};
 				req.onload = function() {
@@ -1058,7 +1063,7 @@ var Search = (function() {
 			},
 			get: function() {
 				return _resultsNum;
-			},
+			}
 		};
 	})();
 	
@@ -1069,6 +1074,8 @@ var Search = (function() {
 	 * @name Search#onSearchComplete
 	 * @function
 	 * @memberOf Search
+         * @param {Object} sc
+         * @param {Object} searcher google searcher
 	 */
 	function onSearchComplete(sc, searcher)  {
 		
@@ -1099,6 +1106,8 @@ var Search = (function() {
 	 * @name Search#onAutoSearchComplete
 	 * @function
 	 * @memberOf Search
+         * @param {Object} sc
+         * @param {Object} searcher google searcher
 	 */
 	function onAutoSearchComplete(sc, searcher)  {
 		
@@ -1198,7 +1207,7 @@ var Search = (function() {
 			 * @name Query#matchName
 			 * @function
 			 * @memberOf Query
-			 * @param {String} name
+			 * @param {String} str name of file
 			 * @return {Boolean}
 			 */
 			matchName: function(str) {
@@ -1212,7 +1221,7 @@ var Search = (function() {
 			 * @name Query#matchExt
 			 * @function
 			 * @memberOf Query
-			 * @param {String} name
+			 * @param {String} str name of file
 			 * @return {Boolean}
 			 */
 			matchExt: function(str) {
@@ -1626,8 +1635,8 @@ $(function() {
 
 	// init input events
 	$('input[type="button"][name="clearButton"]').click(GFS.Search.clearQuery);
-	$('input[type="button"][name="searchButton"]').click(function() { GFS.Search.start.apply(false) });
-	$('input[type="button"][name="autoSearchButton"]').click(function() { GFS.Search.start.apply(true) });
+	$('input[type="button"][name="searchButton"]').click(function() { GFS.Search.start.apply(false); });
+	$('input[type="button"][name="autoSearchButton"]').click(function() { GFS.Search.start.apply(true); });
 	$('input[type="button"][name="decResults"]').click(GFS.Search.decResultsSize);
 	$('input[type="button"][name="incResults"]').click(GFS.Search.incResultsSize);
 	$('input[type="button"][name="dlButton"]').click(GFS.Download.start);

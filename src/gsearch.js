@@ -223,9 +223,9 @@ var Elements = (function() {
 	 * Directory
 	 * @name Directory
 	 * @memberOf Elements
-         * @param url url of remote directory
-         * @param name name
-         * @param query to apply do directory
+     * @param url url of remote directory
+     * @param name name
+     * @param query to apply do directory
 	 */
 	function Directory(url, name, query) {
 		this._elements = undefined;
@@ -488,7 +488,7 @@ var Elements = (function() {
 				var self = this;
 				this._checkBoxJElement = el.first()
 					.change(function() {
-						if (el.attr('checked'))
+						if (el.prop('checked'))
 							self._select(self._checkBoxJElement);
 						else
 							self._unselect(self._checkBoxJElement);
@@ -670,7 +670,7 @@ var Elements = (function() {
 				// manage select/unselect
 				var self = this;
 				el.change(function(e) {
-					if (el.attr('checked'))
+					if (el.prop('checked'))
 						self._select(self._listJElement);
 					else
 						self._unselect(self._listJElement);
@@ -697,7 +697,7 @@ var Elements = (function() {
 				var cbox = this._localJElement.first();
 				var self = this;
 				cbox.change(function(e) {
-					if (cbox.attr('checked'))
+					if (cbox.prop('checked'))
 						self._select(cbox);
 					else
 						self._unselect(cbox);
